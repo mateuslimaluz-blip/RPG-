@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Empatia em Ação</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--primary:#1a73e8;--muted:#5f6368;}
+    body{font-family:'Poppins',sans-serif;background:#f4f7f6;margin:0;padding:20px;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;}
+    .game-container{width:100%;max-width:900px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);padding:28px;box-sizing:border-box;position:relative;}
+    .screen{display:none;flex-direction:column;gap:20px;padding-bottom:50px;}
+    .screen-content{padding:12px 0;}
+    .game-title{color:var(--primary);text-align:center;margin:0 0 8px 0;}
+    .game-subtitle{color:var(--muted);text-align:center;margin:0 0 18px 0;}
+    .game-description,.reflection{background:#e8f0fe;border-left:5px solid var(--primary);padding:15px;border-radius:6px;margin-bottom:20px;}
+    .error-counter-display{position:absolute;top:18px;right:18px;background:#fff3cd;border:2px solid #ffc107;border-radius:8px;padding:10px 14px;font-weight:700;color:#856404;display:none;}
+    .btn{display:block;text-align:center;padding:12px 20px;border-radius:8px;cursor:pointer;font-weight:700;margin-top:18px;text-decoration:none;background:var(--primary);color:#fff;}
+    .scene-title{text-align:center;color:#333;margin:0 0 8px 0;font-size:1.2rem;}
+    .scene-description{background:#f1f3f4;padding:14px;border-radius:6px;border:1px solid #dadce0;}
+    .dialogue{font-style:italic;color:#6a6e73;font-size:1.03em;margin-top:10px;padding-left:10px;border-left:3px solid #ccc;}
+    .options-container{display:flex;flex-direction:column;gap:14px;margin-top:6px;}
+    .option{display:block;padding:16px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);cursor:pointer;border:2px solid transparent;position:relative;}
+    .option input[type="radio"]{display:none;}
+    .option .option-content{display:block;}
+    .feedback{display:none;margin-top:10px;font-weight:700;padding-top:8px;border-top:1px solid #eee;}
+    .feedback-correct{color:hsl(142,76%,36%);}
+    .feedback-wrong{color:hsl(0,84%,60%);}
+    .next-btn{display:none;position:absolute;right:8px;bottom:8px;padding:8px 12px;border-radius:6px;background:#4caf50;color:#fff;font-weight:700;text-decoration:none;}
+    .option-correct input[type="radio"]:checked ~ .option-content{border-color:hsl(142,76%,36%);background:#e6ffe6;}
+    .option-correct input[type="radio"]:checked ~ .option-content .feedback-correct,
+    .option-correct input[type="radio"]:checked ~ .option-content + .next-btn{display:block;}
+    .option-wrong input[type="radio"]:checked ~ .option-content{border-color:hsl(0,84%,60%);background:#ffe6e6;}
+    .option-wrong input[type="radio"]:checked ~ .option-content .feedback-wrong,
+    .option-wrong input[type="radio"]:checked ~ .option-content + .next-btn{display:block;}
+    .scenario-progress{text-align:center;margin-top:20px;color:var(--muted);font-size:0.95em;}
+    #error-count{font-size:1.2em;font-weight:700;margin:20px 0;text-align:center;}
+    /* hide all scene-screen by default (JS will show the ones needed) */
+    .scene-screen{display:none;}
+    /* mobile tweaks */
+    @media (max-width:600px){
+      body{padding:10px;align-items:stretch;}
+      .game-container{padding:18px;border-radius:6px;box-shadow:none;}
+      .option{padding:14px;font-size:0.98rem;}
+      .btn{font-size:1rem;padding:12px;}
+      .next-btn{position:static;display:inline-block;margin-top:8px;width:100%;text-align:center;}
+      .error-counter-display{position:fixed;top:10px;right:10px;z-index:1000;font-size:0.95em;}
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div id="error-counter" class="error-counter-display">Erros: <span id="error-counter-value">0</span></div>
+
+    <!-- START SCREEN -->
+    <div class="screen" id="screen-start" style="display:flex;">
+      <div class="screen-content">
+        <h1 class="game-title">Empatia em Ação</h1>
+        <p class="game-subtitle">Um jogo sobre respeito e inclusão</p>
+        <div class="game-description">
+          <p><strong>A História:</strong> Você é o Coordenador(a) de Diversidade. Seu desafio é enfrentar ativamente os preconceitos do dia a dia.</p>
+          <p>Se você escolher a <strong>opção correta</strong>, avança. Se errar, o erro será registrado e você avança para a próxima situação.</p>
+          <p style="text-align:center;font-weight:700;margin-top:12px;color:var(--primary);">Complete as 10 situações para vencer!</p>
+        </div>
+        <a href="#" class="btn" id="start-btn">Iniciar Missão</a>
+      </div>
+    </div>
+
+    <!-- SCENE 1 -->
+    <div class="screen scene-screen" id="screen-scene1">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 1: Entrevista de Emprego (Discriminação Racial)</h2>
+        <div class="scene-description">
+          <p>Um candidato negro muito qualificado acabou de sair da sala. Seu colega comenta:</p>
+          <p class="dialogue">"Ele parece bom, mas será que vai se encaixar na nossa 'cultura'?"</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene1-choice" />
+            <span class="option-content">
+              <span class="option-text">"Ele tem todas as qualificações. Vamos avaliar apenas suas competências profissionais."</span>
+              <span class="feedback feedback-correct">✓ Correto! Você agiu com justiça.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene2')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene1-choice" />
+            <span class="option-content">
+              <span class="option-text">"É verdade, talvez não seja o perfil ideal para a equipe."</span>
+              <span class="feedback feedback-wrong">✗ Essa escolha reforça preconceitos.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene1-choice" />
+            <span class="option-content">
+              <span class="option-text">"Vamos procurar alguém que se pareça mais com o resto da equipe."</span>
+              <span class="feedback feedback-wrong">✗ Discriminação explícita.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">1 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 2 -->
+    <div class="screen scene-screen" id="screen-scene2">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 2: Contratação (Etarismo)</h2>
+        <div class="scene-description">
+          <p>Uma profissional de 58 anos, experiente em tecnologia, se candidata. Um colega mais jovem diz:</p>
+          <p class="dialogue">"Ela não vai conseguir acompanhar. Pessoal dessa idade não entende de tecnologia."</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene2-choice" />
+            <span class="option-content">
+              <span class="option-text">"A experiência dela é valiosa. Idade não determina capacidade técnica."</span>
+              <span class="feedback feedback-correct">✓ Excelente! Você combateu o etarismo.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene3')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene2-choice" />
+            <span class="option-content">
+              <span class="option-text">"Talvez seja melhor contratar alguém mais jovem e 'antenado'."</span>
+              <span class="feedback feedback-wrong">✗ Etarismo injustificado.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene2-choice" />
+            <span class="option-content">
+              <span class="option-text">"Concordo. Vamos focar em candidatos da geração millennial."</span>
+              <span class="feedback feedback-wrong">✗ Discriminação por idade.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">2 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 3 (dificult) -->
+    <div class="screen scene-screen" id="screen-scene3">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 3: Linguagem e Microagressões (difícil)</h2>
+        <div class="scene-description">
+          <p>Em uma reunião de projeto, um gestor usa uma expressão antiga e potencialmente ofensiva sobre uma equipe parceira. O ambiente está tenso e você percebe desconforto em alguns colegas. O que você faz?</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene3-choice" />
+            <span class="option-content">
+              <span class="option-text">Aborda o gestor em particular após a reunião, explicando o impacto da expressão e sugerindo alternativas de comunicação.</span>
+              <span class="feedback feedback-correct">✓ Excelente — ação privada e educativa.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene4')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene3-choice" />
+            <span class="option-content">
+              <span class="option-text">Expõe o gestor na frente de todos para deixar claro que aquilo não é aceitável.</span>
+              <span class="feedback feedback-wrong">✗ Errado — pode gerar resistência e não promover aprendizado.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene3-choice" />
+            <span class="option-content">
+              <span class="option-text">Mantém silêncio para evitar tensão e seguir a reunião até o fim.</span>
+              <span class="feedback feedback-wrong">✗ Errado — o silêncio naturaliza comportamentos inadequados.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">3 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 4 (dificult) -->
+    <div class="screen scene-screen" id="screen-scene4">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 4: Identidade e Processos (difícil)</h2>
+        <div class="scene-description">
+          <p>Uma colaboradora trans comenta que evita reuniões porque seu nome antigo ainda aparece em listas e e-mails. Como você age?</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene4-choice" />
+            <span class="option-content">
+              <span class="option-text">Garante correção imediata nas listas e sistemas e comunica a equipe sobre respeito ao nome e identidade.</span>
+              <span class="feedback feedback-correct">✓ Perfeito — ação prática e inclusiva.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene5')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene4-choice" />
+            <span class="option-content">
+              <span class="option-text">Pede que a própria colaboradora informe os colegas para evitar exposição.</span>
+              <span class="feedback feedback-wrong">✗ Errado — a responsabilidade não deve recair sobre a pessoa afetada.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene4-choice" />
+            <span class="option-content">
+              <span class="option-text">Sugere esperar até o sistema atualizar automaticamente e não expor o caso.</span>
+              <span class="feedback feedback-wrong">✗ Errado — esperar reforça exclusão.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">4 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 5 -->
+    <div class="screen scene-screen" id="screen-scene5">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 5: Deficiência Física</h2>
+        <div class="scene-description">
+          <p>Um candidato cadeirante foi aprovado. Um gerente questiona:</p>
+          <p class="dialogue">"Como ele vai fazer o trabalho? Vai precisar de muitas adaptações."</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene5-choice" />
+            <span class="option-content">
+              <span class="option-text">"Faremos as adaptações necessárias. Ele foi contratado por suas competências."</span>
+              <span class="feedback feedback-correct">✓ Perfeito! Você promoveu a acessibilidade.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene6')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene5-choice" />
+            <span class="option-content">
+              <span class="option-text">"Talvez seja melhor encontrar alguém sem essas necessidades."</span>
+              <span class="feedback feedback-wrong">✗ Errado — discriminação por deficiência.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene5-choice" />
+            <span class="option-content">
+              <span class="option-text">"É muito caro adaptar o ambiente."</span>
+              <span class="feedback feedback-wrong">✗ Errado — acessibilidade é direito.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">5 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 6 (dificult) -->
+    <div class="screen scene-screen" id="screen-scene6">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 6: Orientação Sexual (difícil)</h2>
+        <div class="scene-description">
+          <p>Durante um almoço da equipe, um colega faz piadas sutis sobre casais homoafetivos. Ninguém reage. Qual é a melhor postura?</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene6-choice" />
+            <span class="option-content">
+              <span class="option-text">Depois, aborda o colega com empatia, explicando por que piadas assim podem ferir e pedindo que evite.</span>
+              <span class="feedback feedback-correct">✓ Correto — corrige com empatia e promove aprendizado.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene7')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene6-choice" />
+            <span class="option-content">
+              <span class="option-text">Ignora para não criar constrangimento no grupo.</span>
+              <span class="feedback feedback-wrong">✗ Errado — o silêncio normaliza o preconceito.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene6-choice" />
+            <span class="option-content">
+              <span class="option-text">Faz uma piada de volta para "relativizar" o comentário.</span>
+              <span class="feedback feedback-wrong">✗ Errado — minimizar não resolve o problema.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">6 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 7 -->
+    <div class="screen scene-screen" id="screen-scene7">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 7: Religião</h2>
+        <div class="scene-description">
+          <p>Uma funcionária muçulmana pede um espaço para orações diárias. Um colega comenta:</p>
+          <p class="dialogue">"Isso é exagero. Ela pode rezar em casa."</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene7-choice" />
+            <span class="option-content">
+              <span class="option-text">"Respeitar práticas religiosas faz parte da inclusão. Vamos providenciar o espaço."</span>
+              <span class="feedback feedback-correct">✓ Perfeito! Você respeitou a diversidade religiosa.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene8')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene7-choice" />
+            <span class="option-content">
+              <span class="option-text">"Concordo, isso atrapalha o trabalho."</span>
+              <span class="feedback feedback-wrong">✗ Errado — intolerância religiosa.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene7-choice" />
+            <span class="option-content">
+              <span class="option-text">"Vamos ver se outras pessoas reclamam primeiro."</span>
+              <span class="feedback feedback-wrong">✗ Errado — omissão não é aceitável.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">7 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 8 -->
+    <div class="screen scene-screen" id="screen-scene8">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 8: Maternidade</h2>
+        <div class="scene-description">
+          <p>Uma candidata qualificada menciona que tem dois filhos pequenos. Um gerente hesita:</p>
+          <p class="dialogue">"Com filhos pequenos, ela não vai ter disponibilidade total."</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene8-choice" />
+            <span class="option-content">
+              <span class="option-text">"Ter filhos não afeta suas qualificações profissionais. Vamos avaliar apenas suas competências."</span>
+              <span class="feedback feedback-correct">✓ Excelente! Você combateu o preconceito contra mães.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene9')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene8-choice" />
+            <span class="option-content">
+              <span class="option-text">"É verdade, melhor contratar alguém sem essas responsabilidades."</span>
+              <span class="feedback feedback-wrong">✗ Errado — discriminação contra mães.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene8-choice" />
+            <span class="option-content">
+              <span class="option-text">"Vamos perguntar se ela planeja ter mais filhos."</span>
+              <span class="feedback feedback-wrong">✗ Errado — pergunta ilegal/discriminatória.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">8 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 9 (dificult) -->
+    <div class="screen scene-screen" id="screen-scene9">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 9: Aparência e Liderança (difícil)</h2>
+        <div class="scene-description">
+          <p>Durante um processo seletivo interno, alguém comenta que um candidato "não tem o perfil físico de liderança". Como você age?</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene9-choice" />
+            <span class="option-content">
+              <span class="option-text">Reforça que desempenho e competências são os critérios e aponta vieses inconscientes.</span>
+              <span class="feedback feedback-correct">✓ Exemplo de liderança inclusiva.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="advanceToScene('screen-scene10')">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene9-choice" />
+            <span class="option-content">
+              <span class="option-text">Não comenta nada, entendendo que foi só uma opinião pessoal.</span>
+              <span class="feedback feedback-wrong">✗ Errado — omissão perpetua viés.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene9-choice" />
+            <span class="option-content">
+              <span class="option-text">Desvia o assunto para manter harmonia e evitar confronto.</span>
+              <span class="feedback feedback-wrong">✗ Errado — evitar impede mudança.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">9 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- SCENE 10 -->
+    <div class="screen scene-screen" id="screen-scene10">
+      <div class="screen-content">
+        <h2 class="scene-title">Situação 10: Sotaque e Origem</h2>
+        <div class="scene-description">
+          <p>Um candidato nordestino muito qualificado tem sotaque forte. Um colega comenta:</p>
+          <p class="dialogue">"Ele fala 'engraçado'. Os clientes vão ter dificuldade de entender."</p>
+        </div>
+        <div class="options-container">
+          <label class="option option-correct">
+            <input type="radio" name="scene10-choice" />
+            <span class="option-content">
+              <span class="option-text">"Sotaque é parte da diversidade cultural. Ele se comunica bem."</span>
+              <span class="feedback feedback-correct">✓ Excelente! Você completou todas as situações com sucesso!</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="showVictoryScreen()">Ver Resultado Final →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene10-choice" />
+            <span class="option-content">
+              <span class="option-text">"É verdade, melhor contratar alguém com sotaque neutro."</span>
+              <span class="feedback feedback-wrong">✗ Errado — preconceito regional.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+
+          <label class="option option-wrong">
+            <input type="radio" name="scene10-choice" />
+            <span class="option-content">
+              <span class="option-text">"Vamos pedir para ele fazer um curso de dicção."</span>
+              <span class="feedback feedback-wrong">✗ Errado — discriminação disfarçada.</span>
+            </span>
+            <a href="#" class="next-btn" style="display:none;" onclick="registerErrorAndAdvanceAuto()">Continuar →</a>
+          </label>
+        </div>
+        <p class="scenario-progress">10 de 10 Situações</p>
+      </div>
+    </div>
+
+    <!-- VICTORY -->
+    <div class="screen" id="screen-victory">
+      <div class="screen-content">
+        <h1 class="game-title">🎉 Parabéns! 🎉</h1>
+        <div class="reflection">
+          <p class="victory-message" style="font-size:1.05rem;font-weight:700;">Você completou todas as 10 situações!</p>
+          <p id="error-count">Total de erros no percurso: 0</p>
+          <p style="margin-top:12px;">Sua habilidade de <strong>agir</strong> e <strong>intervir</strong> transforma a cultura da empresa. Continue promovendo empatia!</p>
+        </div>
+        <a href="#" class="btn" id="restart-btn">Jogar Novamente</a>
+      </div>
+    </div>
+
+  </div><!-- end container -->
+
+<script>
+// CORE GAME LOGIC - Clean and stable version (fixed order of scenes, options shuffled each play)
+let errorCounter = 0;
+let currentScreenId = 'screen-start';
+let scenes = Array.from(document.querySelectorAll('.scene-screen')); // will map to screens 1..10
+
+function initDisplay() {
+  // Hide all scene screens and show only start
+  document.querySelectorAll('.scene-screen').forEach(s => s.style.display = 'none');
+  document.getElementById('screen-start').style.display = 'flex';
+  document.getElementById('screen-victory').style.display = 'none';
+  document.getElementById('error-counter').style.display = 'none';
+}
+
+function shuffleOptionsInScenes() {
+  document.querySelectorAll('.scene-screen').forEach(scene => {
+    const container = scene.querySelector('.options-container');
+    if (!container) return;
+    const options = Array.from(container.querySelectorAll('.option'));
+    // Fisher-Yates
+    for (let i = options.length -1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [options[i], options[j]] = [options[j], options[i]];
+    }
+    options.forEach(opt => container.appendChild(opt));
+  });
+}
+
+function setupSceneLocking() {
+  const allRadios = document.querySelectorAll('.scene-screen input[type="radio"]');
+  allRadios.forEach(radio => radio.addEventListener('change', (e)=>{
+    const currentScene = radio.closest('.scene-screen');
+    if (currentScene) {
+      // lock all radios in this scene to prevent changing after choice
+      currentScene.querySelectorAll('input[type="radio"]').forEach(r=> r.disabled = true);
+    }
+  }));
+}
+
+function uncheckAllSceneOptions() {
+  const allSceneChoices = document.querySelectorAll('input[name*="choice"]');
+  allSceneChoices.forEach(radio => radio.checked = false);
+}
+
+function updateErrorCounter() {
+  const el = document.getElementById('error-counter-value');
+  if (el) el.textContent = errorCounter;
+}
+
+function advanceToScene(nextScreenId) {
+  // hide current
+  const current = document.getElementById(currentScreenId);
+  if (current) current.style.display = 'none';
+
+  // show next
+  const next = document.getElementById(nextScreenId);
+  if (next) {
+    next.style.display = (next.classList.contains('screen')) ? 'flex' : 'flex';
+    currentScreenId = nextScreenId;
+  }
+
+  // ensure radios enabled for next scene
+  const radios = document.querySelectorAll(`#${currentScreenId} input[type="radio"]`);
+  radios.forEach(r=> r.disabled = false);
+  uncheckAllSceneOptions();
+  updateErrorCounter();
+}
+
+// Start game: shuffle options, reset counters, show screen 1
+function startGame() {
+  errorCounter = 0;
+  updateErrorCounter();
+  document.getElementById('error-counter').style.display = 'block';
+  shuffleOptionsInScenes();
+  // scenes fixed order: ensure scenes array reflects DOM order of scene-screen ids 1..10
+  scenes = Array.from(document.querySelectorAll('.scene-screen')).sort((a,b)=> {
+    const ai = parseInt(a.id.replace('screen-scene',''),10);
+    const bi = parseInt(b.id.replace('screen-scene',''),10);
+    return ai - bi;
+  });
+  advanceToScene('screen-scene1');
+}
+
+// Called when wrong option chosen
+function registerErrorAndAdvanceAuto() {
+  errorCounter++;
+  updateErrorCounter();
+
+  // find current index in scenes array (ordered)
+  const idx = scenes.findIndex(s => s.id === currentScreenId);
+  if (idx >= 0 && idx < scenes.length - 1) {
+    const nextId = scenes[idx + 1].id;
+    advanceToScene(nextId);
+  } else {
+    showVictoryScreen();
+  }
+}
+
+function showVictoryScreen() {
+  advanceToScene('screen-victory');
+  document.getElementById('error-counter').style.display = 'none';
+  const errorDisplay = document.getElementById('error-count');
+  if (!errorDisplay) return;
+  if (errorCounter === 0) {
+    errorDisplay.innerHTML = '🎯 Você acertou todas! <strong>ZERO</strong> erros! 🎉';
+    errorDisplay.style.color = 'hsl(142,76%,36%)';
+  } else if (errorCounter === 1) {
+    errorDisplay.innerHTML = `Você venceu com apenas <strong>${errorCounter}</strong> erro. Excelente!`;
+    errorDisplay.style.color = 'hsl(40,84%,60%)';
+  } else {
+    errorDisplay.innerHTML = `Você venceu com <strong>${errorCounter}</strong> erros. Continue praticando!`;
+    errorDisplay.style.color = 'hsl(0,84%,60%)';
+  }
+}
+
+function resetGame() {
+  errorCounter = 0;
+  updateErrorCounter();
+  initDisplay();
+  currentScreenId = 'screen-start';
+}
+
+// Wire up buttons and initial setup
+document.addEventListener('DOMContentLoaded', ()=>{
+  initDisplay();
+  setupSceneLocking();
+  document.getElementById('start-btn').addEventListener('click', (e)=>{ e.preventDefault(); startGame(); });
+  document.getElementById('restart-btn').addEventListener('click', (e)=>{ e.preventDefault(); resetGame(); });
+  // make sure options are shuffled on first play as well
+  shuffleOptionsInScenes();
+});
+
+// Show feedback and reveal "Continuar" button only after selection
+document.querySelectorAll('.scene-screen input[type="radio"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const scene = e.target.closest('.scene-screen');
+    if (!scene) return;
+    const selectedOption = e.target.closest('.option');
+    const feedbacks = scene.querySelectorAll('.feedback');
+    feedbacks.forEach(fb => fb.style.display = 'none');
+    if (selectedOption) {
+      const feedback = selectedOption.querySelector('.feedback');
+      const nextBtn = selectedOption.querySelector('.next-btn');
+      if (feedback) feedback.style.display = 'block';
+      if (nextBtn) nextBtn.style.display = 'inline-block';
+    }
+  });
+});
+</script>
+</body>
+</html>
